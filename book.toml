@@ -9,6 +9,9 @@ title = " C++ Study"
 additional-css = ["./mdbook-admonish.css"]
 
 [preprocessor]
+# add the emoji preprocessor
+[preprocessor.emojicodes]
+
 
 [preprocessor.admonish]
 command = "mdbook-admonish"
