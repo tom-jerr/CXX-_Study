@@ -16,3 +16,4 @@
   - [awk](./chapter3/3-awk.md)
   - [find](./chapter3/4-find.md)
 - [Chapter 4 Analysis Tools](./chapter_4_analysis_tools.md)
+- [Chapter 5 C++ Optimization](./chapter_5_c++_optimization.md)

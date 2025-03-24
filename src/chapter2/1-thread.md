@@ -1,4 +1,53 @@
 # 2.1 thread & jthread
+## thread 传递参数
+- 如果thread执行的函数参数是一个引用的话，需要`std::ref`
+  ```c++
+   void update_data_for_widget(widget_id w,widget_data& data); // 1  
+   void oops_again(widget_id w)  {  
+    widget_data data;  std::thread t(update_data_for_widget,w,std::ref(data)); // 2  
+    display_status();  
+    t.join();  
+    process_widget_data(data); 
+   } 
+  ```
+- 这依赖于 std::thread 实例的可移动且不可复  制性。不可复制性表示在某一时间点,一个 std::thread 实例只能关联一个执行线程。可移动性使得开发者可  以自己决定,哪个实例拥有线程实际执行的所有权
+- `std::thread::hardware_concurrency()` 会返回并发线程的数量。例如,多核系统中,  返回值可以是CPU核芯的数量。返回值也仅仅是一个标识,当无法获取时,函数返回0。
+  ```c++
+  // parallel accumulate
+  template<typename Iterator,typename T>  
+  struct accumulate_block  {  
+    void operator()(Iterator first,Iterator last,T& result)  {  result=std::accumulate(first,last,result);  
+    }  
+  }; 
+  template<typename Iterator,typename T>  
+  T parallel_accumulate(Iterator first,Iterator last,T init)  
+  {  
+    unsigned long const length=std::distance(first,last);  
+    if(!length) // 1  
+        return init;  
+    unsigned long const min_per_thread=25;  
+    unsigned long const max_threads=  (length+min_per_thread-1)/min_per_thread; // 2  
+    unsigned long const hardware_threads=  std::thread::hardware_concurrency();  unsigned long const num_threads= // 3 
+    std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads);  unsigned long const block_size=length/num_threads; // 4  
+    std::vector<T> results(num_threads);  
+    std::vector<std::thread> threads(num_threads-1); // 5  
+    Iterator block_start=first;  
+    for(unsigned long i=0; i < (num_threads-1); ++i)  
+    {  
+        Iterator block_end=block_start;  
+        std::advance(block_end,block_size); // 6  
+        threads[i]=std::thread( // 7  
+            accumulate_block<Iterator,T>(),  
+            block_start,block_end,std::ref(results[i]));
+        block_start=block_end; // 8  
+    }  
+    accumulate_block<Iterator,T>()(  block_start,last,results[num_threads-1]); // 9 
+    for (auto& entry : threads)  entry.join(); // 10 
+    return std::accumulate(results.begin(),results.end(),init); // 11 
+  }
+  ```
+
+## jthread
 - C++11 引入了 std::thread 类型,其与操作系统提供的线程对应,但该类型有一个严重的设计缺  陷: 不是 RAII 类型。
 ## thread 存在的问题
 std::thread 要求在其生命周期结束时,若表示正在运行的线程,则调用 join()(等待线程结束) 或  detach()(让线程在后台运行)。若两者都没有调用,析构函数会立即导致异常的程序终止 (在某些系统上导致段错误)。  
